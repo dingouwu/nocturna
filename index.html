@@ -637,7 +637,7 @@ footer {
         <div class="bracket br-tr"></div>
         <div class="bracket br-bl"></div>
         <div class="bracket br-br"></div>
-        <img src="1774868179079_image.png" alt="Nocturna — Búho de Origami en vuelo"
+        <img src="1774868179079_image.png.jpg" alt="Nocturna — Búho de Origami en vuelo"
              onerror="this.parentElement.style.minHeight='320px';this.style.display='none'">
         <div class="ed-pill">
           <span class="n">I</span>
@@ -673,10 +673,10 @@ footer {
       Sin margen para el error.
     </p>
     <div class="story-aside">
-      Durante más de ocho horas, cada pliegue fue trazado con precisión milimétrica, 
+      Durante más de cuatro horas, cada pliegue fue trazado con precisión milimétrica, 
       transformando en silencio lo plano en vuelo, lo ordinario en eternidad.
       <br><br>
-      <em style="color:var(--gold-light)">Nocturna</em> descansa ahora bajo vidrio, sobre madera calida, 
+      <em style="color:var(--gold-light)">Nocturna</em> descansa ahora bajo vidrio, sobre nogal americano, 
       iluminada desde abajo — como si el instante exacto del despegue hubiera quedado 
       suspendido para siempre en el tiempo.
       <br><br>
@@ -687,7 +687,7 @@ footer {
   <!-- GALLERY STRIP -->
   <div class="gallery-strip">
     <div class="gallery-cell">
-      <div class="gc-number">+8h</div>
+      <div class="gc-number">+4h</div>
       <div class="gc-title">Tiempo de creación</div>
       <div class="gc-desc">Cada pliegue, trazado a mano. Ningún proceso automatizado.</div>
     </div>
@@ -709,8 +709,8 @@ footer {
     <table class="specs-table">
       <tr><td>Técnica</td><td>Origami puro — un único pliegue continuo</td></tr>
       <tr><td>Material</td><td>Papel Washi japonés, gramaje 40 g/m²</td></tr>
-      <tr><td>Vitrina</td><td>Vidrio templado + base de madera calida</td></tr>
-      <tr><td>Iluminación</td><td>LED cálido </td></tr>
+      <tr><td>Vitrina</td><td>Vidrio templado + base de nogal americano macizo</td></tr>
+      <tr><td>Iluminación</td><td>LED cálido 2700K integrado en base, efecto halo</td></tr>
       <tr><td>Dimensiones</td><td>17 × 17 × 16 cm — compacta, presentable</td></tr>
       <tr><td>Edición</td><td>I / V · II / V · III / V · IV / V · V / V</td></tr>
       <tr><td>Certificado</td><td>Documento firmado por el artista, número de serie único</td></tr>
@@ -780,11 +780,15 @@ footer {
       <p class="m-eye">Reservar pieza</p>
       <p class="m-title">Nocturna — III / V</p>
       <p class="m-price">$650 USD · Envío incluido</p>
-      <div class="m-field"><label>Nombre completo</label><input type="text" placeholder="Su nombre"></div>
-      <div class="m-field"><label>Correo electrónico</label><input type="email" placeholder="correo@ejemplo.com"></div>
-      <div class="m-field"><label>País de entrega</label><input type="text" placeholder="País"></div>
-      <button class="m-submit" onclick="submitForm()">Confirmar Reserva</button>
-      <p class="m-note">Sin cargo ahora. Un especialista le contactará en menos de 24 horas para coordinar pago y envío.</p>
+      <form name="reservas" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="handleSubmit(event)">
+        <input type="hidden" name="form-name" value="reservas">
+        <input type="hidden" name="bot-field" style="display:none">
+        <div class="m-field"><label>Nombre completo</label><input type="text" name="nombre" placeholder="Su nombre" required></div>
+        <div class="m-field"><label>Correo electrónico</label><input type="email" name="email" placeholder="correo@ejemplo.com" required></div>
+        <div class="m-field"><label>País de entrega</label><input type="text" name="pais" placeholder="País" required></div>
+        <button type="submit" class="m-submit">Confirmar Reserva</button>
+        <p class="m-note">Sin cargo ahora. Le contactaremos en menos de 24 horas para coordinar pago y envío.</p>
+      </form>
     </div>
     <div class="success" id="success">
       <span class="s-ico">✦</span>
@@ -823,7 +827,20 @@ window.addEventListener('resize',()=>{resize();mkStars();});
 function openModal(){document.getElementById('overlay').classList.add('on');}
 function closeModal(){document.getElementById('overlay').classList.remove('on');}
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
-function submitForm(){document.getElementById('form-wrap').style.display='none';document.getElementById('success').style.display='block';}
+
+/* ── FORM con Netlify ── */
+function handleSubmit(e){
+  e.preventDefault();
+  const form=e.target;
+  const data=new FormData(form);
+  fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams(data).toString()})
+  .then(()=>{
+    document.getElementById('form-wrap').style.display='none';
+    document.getElementById('success').style.display='block';
+  })
+  .catch(()=>alert('Hubo un error. Por favor intente de nuevo.'));
+}
 </script>
 </body>
 </html>
