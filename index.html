@@ -1,846 +1,161 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NOCTURNA — Arte Coleccionable</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,200;0,300;0,400;1,200;1,300;1,400&family=Cinzel:wght@400;500;600&family=Jost:wght@100;200;300;400&display=swap" rel="stylesheet">
-<style>
-:root {
-  --gold:       #C9A96E;
-  --gold-light: #E2C99A;
-  --gold-dim:   #8A6E42;
-  --gold-faint: #C9A96E18;
-  --ink:        #08070A;
-  --ink-mid:    #100F14;
-  --ink-lift:   #16141C;
-  --ink-border: #2A2730;
-  --text-cream: #EDE8DF;
-  --text-muted: #6B6575;
-  --text-mid:   #9D96A8;
-}
 
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior: smooth; font-size: 16px; }
+import { addPropertyControls, ControlType } from "framer"
+import * as React from "react"
 
-body {
-  background: var(--ink);
-  color: var(--text-cream);
-  font-family: 'Jost', sans-serif;
-  font-weight: 200;
-  overflow-x: hidden;
-  cursor: none;
-}
+/**
+ * @framerSupportedLayoutWidth auto
+ * @framerSupportedLayoutHeight auto
+ */
+export default function StarRating(props) {
+    const {
+        rating,
+        starColor,
+        filledColor,
+        starSize,
+        textSize,
+        textWeight,
+        textColor, // New prop for text color
+        style,
+    } = props
 
-/* ── CURSOR ── */
-#cur  { position:fixed; width:5px; height:5px; background:var(--gold); border-radius:50%; pointer-events:none; z-index:9999; transform:translate(-50%,-50%); }
-#ring { position:fixed; width:36px; height:36px; border:0.5px solid var(--gold); border-radius:50%; pointer-events:none; z-index:9998; transform:translate(-50%,-50%); opacity:.35; transition:width .3s,height .3s,opacity .3s; }
-body:has(button:hover) #ring,
-body:has(a:hover) #ring { width:52px; height:52px; opacity:.15; }
+    // Ensure all whole numbers are displayed with .0
+    const formattedRating = Number.isInteger(rating)
+        ? `${rating}.0`
+        : rating.toFixed(1)
 
-/* ── STARS CANVAS ── */
-#stars { position:fixed; inset:0; z-index:0; pointer-events:none; }
+    const renderStar = (index) => {
+        if (rating >= index + 1) {
+            // Full star
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill={filledColor}
+                    width={`${starSize}px`}
+                    height={`${starSize}px`}
+                >
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                </svg>
+            )
+        } else if (rating > index && rating < index + 1) {
+            // Half-filled star
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width={`${starSize}px`}
+                    height={`${starSize}px`}
+                >
+                    <defs>
+                        <linearGradient id={`half-fill-${index}`}>
+                            <stop offset="50%" stopColor={filledColor} />
+                            <stop offset="50%" stopColor={starColor} />
+                        </linearGradient>
+                    </defs>
+                    <path
+                        fill={`url(#half-fill-${index})`}
+                        d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                    />
+                </svg>
+            )
+        } else {
+            // Empty star
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill={starColor}
+                    width={`${starSize}px`}
+                    height={`${starSize}px`}
+                >
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                </svg>
+            )
+        }
+    }
 
-/* ── GLOBAL LAYERS ── */
-.page-wrap { position:relative; z-index:1; }
-
-/* ── NOISE OVERLAY ── */
-.noise {
-  position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.028;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* ── GOLD LINES DECORATOR ── */
-.top-frame {
-  position:fixed; top:0; left:0; right:0; z-index:10;
-  height:1px;
-  background: linear-gradient(to right, transparent 0%, var(--gold-dim) 30%, var(--gold) 50%, var(--gold-dim) 70%, transparent 100%);
-  opacity:.6;
-}
-
-/* ── NAV ── */
-nav {
-  position:fixed; top:0; left:0; right:0; z-index:100;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:1.6rem 3rem;
-  background: linear-gradient(to bottom, rgba(8,7,10,.95) 0%, transparent 100%);
-}
-.nav-brand {
-  font-family:'Cinzel', serif;
-  font-size:.7rem;
-  letter-spacing:.5em;
-  color:var(--gold);
-  text-decoration:none;
-}
-.nav-links { display:flex; gap:2.5rem; }
-.nav-links a {
-  font-size:.6rem;
-  letter-spacing:.25em;
-  color:var(--text-muted);
-  text-decoration:none;
-  text-transform:uppercase;
-  transition:color .3s;
-  cursor:none;
-}
-.nav-links a:hover { color:var(--gold-light); }
-
-/* ── HERO ── */
-.hero {
-  min-height:100vh;
-  display:grid;
-  place-items:center;
-  position:relative;
-  overflow:hidden;
-  background: radial-gradient(ellipse 55% 70% at 50% 65%, #1E1726 0%, #0D0C11 45%, var(--ink) 100%);
-}
-
-.hero-glow {
-  position:absolute;
-  bottom:22%; left:50%;
-  transform:translateX(-50%);
-  width:280px; height:80px;
-  background: radial-gradient(ellipse, #C9A96E40 0%, transparent 65%);
-  animation: hglow 4s ease-in-out infinite;
-  pointer-events:none;
-}
-@keyframes hglow { 0%,100%{opacity:.5;transform:translateX(-50%) scale(1)} 50%{opacity:1;transform:translateX(-50%) scale(1.2)} }
-
-.hero-vignette {
-  position:absolute; inset:0;
-  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, var(--ink) 100%);
-  pointer-events:none;
-}
-
-.hero-inner {
-  display:flex; flex-direction:column; align-items:center;
-  text-align:center; padding:0 2rem;
-  position:relative; z-index:1;
-}
-
-.eyebrow {
-  font-family:'Cinzel', serif;
-  font-size:.55rem;
-  letter-spacing:.6em;
-  color:var(--gold-dim);
-  text-transform:uppercase;
-  margin-bottom:3.5rem;
-  opacity:0; animation: fu 1s ease .2s forwards;
-}
-
-/* Ornament lines around eyebrow */
-.eyebrow-wrap { display:flex; align-items:center; gap:1.2rem; }
-.orn-line { width:40px; height:.5px; background:var(--gold-dim); }
-
-.product-frame {
-  position:relative;
-  width:360px;
-  opacity:0; animation: fu 1.3s ease .5s forwards;
-}
-
-.product-frame img {
-  width:100%; display:block;
-  filter: drop-shadow(0 0 60px rgba(201,169,110,.18)) drop-shadow(0 40px 80px rgba(0,0,0,.9));
-}
-
-/* corner brackets */
-.bracket { position:absolute; width:22px; height:22px; }
-.bracket::before,.bracket::after { content:''; position:absolute; background:var(--gold-dim); }
-.bracket::before { width:100%; height:.5px; top:0; left:0; }
-.bracket::after  { width:.5px; height:100%; top:0; left:0; }
-.br-tl { top:-8px; left:-8px; }
-.br-tr { top:-8px; right:-8px; transform:scaleX(-1); }
-.br-bl { bottom:-8px; left:-8px; transform:scaleY(-1); }
-.br-br { bottom:-8px; right:-8px; transform:scale(-1); }
-
-.ed-pill {
-  position:absolute; top:-14px; right:-20px;
-  border:.5px solid var(--gold-dim);
-  padding:.5rem .9rem;
-  background:var(--ink-mid);
-  font-family:'Cinzel', serif;
-}
-.ed-pill .n { font-size:1.1rem; color:var(--gold); display:block; line-height:1; }
-.ed-pill .d { font-size:.5rem; letter-spacing:.15em; color:var(--text-muted); }
-
-.hero-title {
-  font-family:'Cormorant Garamond', serif;
-  font-size:clamp(4rem,9vw,7rem);
-  font-weight:200;
-  font-style:italic;
-  letter-spacing:.04em;
-  line-height:.9;
-  margin-top:3rem;
-  opacity:0; animation: fu 1s ease .9s forwards;
-}
-.hero-title span { color:var(--gold-light); }
-
-.hero-tagline {
-  margin-top:1.2rem;
-  font-size:.6rem;
-  letter-spacing:.35em;
-  color:var(--text-muted);
-  text-transform:uppercase;
-  opacity:0; animation: fu 1s ease 1.1s forwards;
-}
-
-.hero-price-hint {
-  margin-top:2.5rem;
-  display:flex; align-items:center; gap:1rem;
-  opacity:0; animation: fu 1s ease 1.3s forwards;
-}
-.price-line { width:30px; height:.5px; background:var(--gold-dim); }
-.price-hint-text {
-  font-family:'Cormorant Garamond', serif;
-  font-size:1.1rem;
-  font-style:italic;
-  color:var(--gold);
-}
-
-.scroll-cue {
-  position:absolute; bottom:2.5rem; left:50%; transform:translateX(-50%);
-  display:flex; flex-direction:column; align-items:center; gap:.5rem;
-  opacity:0; animation: fu 1s ease 1.8s forwards;
-}
-.scroll-cue span { font-size:.5rem; letter-spacing:.4em; color:var(--text-muted); text-transform:uppercase; }
-.scroll-bar { width:.5px; height:44px; background:linear-gradient(to bottom, var(--gold), transparent); animation:sbar 2s ease-in-out infinite; }
-@keyframes sbar { 0%,100%{transform:scaleY(1);opacity:.4} 50%{transform:scaleY(1.3);opacity:1} }
-
-@keyframes fu { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
-
-/* ── SEPARATOR ── */
-.sep {
-  width:100%; height:.5px;
-  background:linear-gradient(to right, transparent, var(--gold-dim) 30%, var(--gold) 50%, var(--gold-dim) 70%, transparent);
-  opacity:.4;
-}
-.sep-diamond {
-  display:flex; align-items:center; justify-content:center;
-  gap:1.5rem; padding:2.5rem 0;
-}
-.sep-diamond::before,.sep-diamond::after {
-  content:''; flex:1; height:.5px;
-  background:linear-gradient(to right, transparent, var(--gold-dim));
-}
-.sep-diamond::after { background:linear-gradient(to left, transparent, var(--gold-dim)); }
-.diamond-ico { color:var(--gold-dim); font-size:.7rem; }
-
-/* ── SECTION BASE ── */
-.section { padding:8rem 2rem; max-width:960px; margin:0 auto; }
-.s-label {
-  font-family:'Cinzel', serif;
-  font-size:.55rem;
-  letter-spacing:.5em;
-  color:var(--gold-dim);
-  text-transform:uppercase;
-  display:flex; align-items:center; gap:1.2rem;
-  margin-bottom:4rem;
-}
-.s-label::after { content:''; flex:1; height:.5px; background:var(--ink-border); }
-
-/* ── STORY ── */
-.story-quote {
-  font-family:'Cormorant Garamond', serif;
-  font-size:clamp(1.6rem,3.5vw,2.4rem);
-  font-weight:200;
-  line-height:1.7;
-  color:var(--text-cream);
-}
-.story-quote em { color:var(--gold-light); font-style:italic; }
-.story-aside {
-  margin-top:3.5rem;
-  padding-left:2rem;
-  border-left:.5px solid var(--gold-dim);
-  font-size:.85rem;
-  color:var(--text-muted);
-  line-height:1.9;
-  letter-spacing:.04em;
-  max-width:500px;
-}
-
-/* ── SPECS ── */
-.specs-table {
-  width:100%; border-collapse:collapse; margin-top:3rem;
-}
-.specs-table tr { border-bottom:.5px solid var(--ink-border); }
-.specs-table tr:first-child { border-top:.5px solid var(--ink-border); }
-.specs-table td {
-  padding:1.6rem 0;
-  font-size:.8rem;
-  vertical-align:top;
-}
-.specs-table td:first-child {
-  font-family:'Cinzel', serif;
-  font-size:.52rem;
-  letter-spacing:.3em;
-  color:var(--gold-dim);
-  text-transform:uppercase;
-  width:180px;
-  padding-right:2rem;
-}
-.specs-table td:last-child {
-  font-family:'Cormorant Garamond', serif;
-  font-size:1.15rem;
-  color:var(--text-cream);
-}
-
-/* ── GALLERY STRIP ── */
-.gallery-strip {
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:1px;
-  background:var(--ink-border);
-  margin:0;
-  width:100%;
-}
-.gallery-cell {
-  background:var(--ink-mid);
-  padding:3.5rem 2rem;
-  text-align:center;
-  position:relative;
-  overflow:hidden;
-}
-.gallery-cell::after {
-  content:'';
-  position:absolute; inset:0;
-  background:linear-gradient(135deg, var(--gold-faint) 0%, transparent 60%);
-  opacity:0; transition:opacity .4s;
-}
-.gallery-cell:hover::after { opacity:1; }
-.gc-number {
-  font-family:'Cormorant Garamond', serif;
-  font-size:3.5rem;
-  font-weight:200;
-  color:var(--ink-lift);
-  line-height:1;
-  margin-bottom:1rem;
-  position:relative; z-index:1;
-}
-.gc-title {
-  font-family:'Cinzel', serif;
-  font-size:.55rem;
-  letter-spacing:.3em;
-  color:var(--gold);
-  text-transform:uppercase;
-  margin-bottom:.6rem;
-  position:relative; z-index:1;
-}
-.gc-desc {
-  font-size:.75rem;
-  color:var(--text-muted);
-  line-height:1.8;
-  position:relative; z-index:1;
-}
-
-/* ── PRICE HERO ── */
-.price-hero {
-  position:relative;
-  overflow:hidden;
-  background:var(--ink-mid);
-  border-top:.5px solid var(--ink-border);
-  border-bottom:.5px solid var(--ink-border);
-  text-align:center;
-  padding:8rem 2rem;
-}
-.price-hero::before {
-  content:'';
-  position:absolute; inset:0;
-  background:
-    radial-gradient(ellipse 60% 80% at 50% 100%, #C9A96E0E 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 30% 20%, #C9A96E06 0%, transparent 60%);
-}
-.price-eyebrow {
-  font-family:'Cinzel', serif;
-  font-size:.55rem;
-  letter-spacing:.6em;
-  color:var(--gold-dim);
-  text-transform:uppercase;
-  margin-bottom:2rem;
-  position:relative; z-index:1;
-}
-.price-giant {
-  font-family:'Cormorant Garamond', serif;
-  font-size:clamp(5rem,14vw,10rem);
-  font-weight:200;
-  line-height:.85;
-  color:var(--text-cream);
-  position:relative; z-index:1;
-  letter-spacing:-.01em;
-}
-.price-giant sup {
-  font-size:2rem;
-  color:var(--gold);
-  vertical-align:super;
-  letter-spacing:0;
-  margin-right:.1em;
-}
-.price-sub {
-  margin-top:1.5rem;
-  font-size:.65rem;
-  letter-spacing:.3em;
-  color:var(--text-muted);
-  text-transform:uppercase;
-  position:relative; z-index:1;
-}
-
-.avail-bar {
-  display:inline-flex; align-items:center; gap:.7rem;
-  margin:2.5rem auto 3.5rem;
-  border:.5px solid var(--ink-border);
-  padding:.8rem 1.8rem;
-  position:relative; z-index:1;
-}
-.avail-dot { width:5px; height:5px; background:var(--gold); border-radius:50%; animation:adot 2s ease-in-out infinite; }
-@keyframes adot { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(201,169,110,.5)} 50%{opacity:.7;box-shadow:0 0 0 5px rgba(201,169,110,0)} }
-.avail-txt { font-size:.6rem; letter-spacing:.2em; color:var(--gold-light); text-transform:uppercase; }
-
-.buy-btn {
-  display:inline-block;
-  padding:1.2rem 4rem;
-  border:.5px solid var(--gold-dim);
-  font-family:'Cinzel', serif;
-  font-size:.6rem;
-  letter-spacing:.35em;
-  color:var(--gold);
-  background:transparent;
-  cursor:none;
-  text-transform:uppercase;
-  position:relative; z-index:1; overflow:hidden;
-  transition:color .5s;
-}
-.buy-btn::before {
-  content:'';
-  position:absolute; inset:0;
-  background:var(--gold);
-  transform:scaleY(0);
-  transform-origin:bottom;
-  transition:transform .5s cubic-bezier(.4,0,.2,1);
-}
-.buy-btn:hover::before { transform:scaleY(1); }
-.buy-btn:hover { color:var(--ink); }
-.buy-btn span { position:relative; z-index:1; }
-
-/* ── TRUST GRID ── */
-.trust-grid {
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:0;
-  border:.5px solid var(--ink-border);
-  margin-top:4rem;
-}
-.trust-cell {
-  padding:3rem 2rem;
-  border-right:.5px solid var(--ink-border);
-  text-align:center;
-  position:relative; overflow:hidden;
-}
-.trust-cell:last-child { border-right:none; }
-.trust-cell::before {
-  content:'';
-  position:absolute; top:0; left:0; right:0; height:.5px;
-  background:linear-gradient(to right, transparent, var(--gold-dim), transparent);
-  opacity:0; transition:opacity .4s;
-}
-.trust-cell:hover::before { opacity:1; }
-.trust-ico {
-  font-family:'Cormorant Garamond', serif;
-  font-size:1.6rem;
-  color:var(--gold-dim);
-  display:block; margin-bottom:1.2rem;
-}
-.trust-title {
-  font-family:'Cinzel', serif;
-  font-size:.52rem;
-  letter-spacing:.25em;
-  color:var(--text-cream);
-  text-transform:uppercase;
-  margin-bottom:.8rem;
-}
-.trust-desc { font-size:.72rem; color:var(--text-muted); line-height:1.9; }
-
-/* ── FINAL CTA STRIP ── */
-.final-strip {
-  background:var(--ink-lift);
-  border-top:.5px solid var(--ink-border);
-  padding:5rem 2rem;
-  text-align:center;
-}
-.final-strip p {
-  font-family:'Cormorant Garamond', serif;
-  font-size:clamp(1.4rem,3vw,2rem);
-  font-style:italic;
-  font-weight:200;
-  color:var(--text-muted);
-  max-width:600px; margin:0 auto 2.5rem;
-  line-height:1.6;
-}
-.final-strip em { color:var(--gold-light); font-style:normal; }
-
-/* ── FOOTER ── */
-footer {
-  border-top:.5px solid var(--ink-border);
-  padding:3rem 2rem;
-  display:flex; align-items:center; justify-content:space-between;
-  flex-wrap:wrap; gap:1rem;
-}
-.ft-brand {
-  font-family:'Cinzel', serif;
-  font-size:.7rem;
-  letter-spacing:.5em;
-  color:var(--gold);
-}
-.ft-copy {
-  font-size:.55rem;
-  letter-spacing:.15em;
-  color:var(--text-muted);
-}
-
-/* ── MODAL ── */
-.overlay {
-  position:fixed; inset:0;
-  background:rgba(5,4,8,.95);
-  z-index:1000;
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; pointer-events:none;
-  transition:opacity .5s;
-  backdrop-filter:blur(6px);
-}
-.overlay.on { opacity:1; pointer-events:all; }
-.modal {
-  background:var(--ink-mid);
-  border:.5px solid var(--gold-dim);
-  max-width:480px; width:92%;
-  padding:3.5rem;
-  position:relative;
-  transform:translateY(30px) scale(.97);
-  transition:transform .5s cubic-bezier(.2,0,.2,1);
-}
-.overlay.on .modal { transform:translateY(0) scale(1); }
-
-.modal::before {
-  content:'';
-  position:absolute; top:0; left:0; right:0; height:.5px;
-  background:linear-gradient(to right, transparent, var(--gold), transparent);
-}
-
-.modal-x {
-  position:absolute; top:1.2rem; right:1.5rem;
-  background:none; border:none; color:var(--text-muted);
-  font-family:'Jost',sans-serif; font-weight:100;
-  font-size:1.1rem; cursor:none; transition:color .3s;
-}
-.modal-x:hover { color:var(--gold); }
-
-.m-eye { font-family:'Cinzel',serif; font-size:.52rem; letter-spacing:.4em; color:var(--gold-dim); text-transform:uppercase; margin-bottom:1.2rem; }
-.m-title { font-family:'Cormorant Garamond',serif; font-size:2rem; font-weight:200; font-style:italic; margin-bottom:.3rem; }
-.m-price { font-family:'Cormorant Garamond',serif; font-size:1.3rem; color:var(--gold-light); margin-bottom:2.5rem; }
-
-.m-field { margin-bottom:1.3rem; }
-.m-field label {
-  display:block;
-  font-size:.52rem;
-  letter-spacing:.25em;
-  color:var(--text-muted);
-  text-transform:uppercase;
-  margin-bottom:.5rem;
-}
-.m-field input {
-  width:100%;
-  background:var(--ink);
-  border:.5px solid var(--ink-border);
-  border-bottom:.5px solid var(--gold-dim);
-  color:var(--text-cream);
-  padding:.9rem 1rem;
-  font-family:'Jost',sans-serif;
-  font-size:.8rem; font-weight:200;
-  outline:none;
-  transition:border-color .3s;
-  cursor:none;
-}
-.m-field input:focus { border-color:var(--gold-dim); }
-
-.m-submit {
-  width:100%; margin-top:.5rem;
-  padding:1.1rem;
-  background:var(--gold);
-  border:none;
-  font-family:'Cinzel',serif;
-  font-size:.55rem;
-  letter-spacing:.3em;
-  color:var(--ink);
-  text-transform:uppercase;
-  cursor:none;
-  transition:background .3s;
-  position:relative; overflow:hidden;
-}
-.m-submit:hover { background:var(--gold-light); }
-.m-note {
-  font-size:.6rem;
-  color:var(--text-muted);
-  text-align:center;
-  margin-top:1rem;
-  line-height:1.7;
-}
-
-.success { display:none; text-align:center; padding:2rem 0; }
-.s-ico { font-size:2.5rem; color:var(--gold); display:block; margin-bottom:1.2rem; }
-.s-ttl { font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-style:italic; font-weight:200; margin-bottom:.8rem; }
-.s-txt { font-size:.75rem; color:var(--text-muted); line-height:1.8; }
-
-/* ── RESPONSIVE ── */
-@media(max-width:680px){
-  nav { padding:1.2rem 1.5rem; }
-  .nav-links { display:none; }
-  .product-frame { width:260px; }
-  .gallery-strip { grid-template-columns:1fr; }
-  .trust-grid { grid-template-columns:1fr; }
-  .trust-cell { border-right:none; border-bottom:.5px solid var(--ink-border); }
-  .trust-cell:last-child { border-bottom:none; }
-  .section { padding:5rem 1.5rem; }
-  footer { flex-direction:column; text-align:center; }
-}
-</style>
-</head>
-<body>
-
-<canvas id="stars"></canvas>
-<div class="noise"></div>
-<div class="top-frame"></div>
-<div id="cur"></div>
-<div id="ring"></div>
-
-<!-- NAV -->
-<nav>
-  <a class="nav-brand" href="#">Nocturna</a>
-  <div class="nav-links">
-    <a href="#obra">La Obra</a>
-    <a href="#specs">Especificaciones</a>
-    <a href="#adquirir">Adquirir</a>
-  </div>
-</nav>
-
-<div class="page-wrap">
-
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-vignette"></div>
-    <div class="hero-inner">
-      <div class="eyebrow-wrap">
-        <div class="orn-line"></div>
-        <p class="eyebrow">Arte Coleccionable · Edición Limitada</p>
-        <div class="orn-line"></div>
-      </div>
-
-      <div class="product-frame">
-        <div class="bracket br-tl"></div>
-        <div class="bracket br-tr"></div>
-        <div class="bracket br-bl"></div>
-        <div class="bracket br-br"></div>
-        <img src="1774868179079_image.png.jpg" alt="Nocturna — Búho de Origami en vuelo"
-             onerror="this.parentElement.style.minHeight='320px';this.style.display='none'">
-        <div class="ed-pill">
-          <span class="n">I</span>
-          <span class="d">de V</span>
+    return (
+        <div
+            style={{
+                ...style,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+            }}
+        >
+            {/* Display the rating number */}
+            <div
+                style={{
+                    fontSize: `${textSize}px`,
+                    fontWeight: textWeight,
+                    color: textColor, // Apply the text color
+                }}
+            >
+                {formattedRating}
+            </div>
+            {/* Display the stars */}
+            <div style={{ display: "flex", gap: "4px" }}>
+                {Array.from({ length: 5 }, (_, index) => renderStar(index))}
+            </div>
         </div>
-      </div>
-
-      <h1 class="hero-title"><span>N</span>octurna</h1>
-      <p class="hero-tagline">Búho · Origami Esculpido a Mano · Vitrina Iluminada</p>
-
-      <div class="hero-price-hint">
-        <div class="price-line"></div>
-        <p class="price-hint-text">Una sola hoja. Cuatro horas. Una obra.</p>
-        <div class="price-line"></div>
-      </div>
-    </div>
-
-    <div class="scroll-cue">
-      <span>Descubrir</span>
-      <div class="scroll-bar"></div>
-    </div>
-  </section>
-
-  <!-- SEP -->
-  <div class="sep-diamond"><span class="diamond-ico">◆</span></div>
-
-  <!-- STORY -->
-  <section class="section" id="obra">
-    <p class="s-label">La Obra</p>
-    <p class="story-quote">
-      Una sola hoja de papel.<br>
-      <em>Sin cortes. Sin pegamento.</em><br>
-      Sin margen para el error.
-    </p>
-    <div class="story-aside">
-      Durante más de cuatro horas, cada pliegue fue trazado con precisión milimétrica, 
-      transformando en silencio lo plano en vuelo, lo ordinario en eternidad.
-      <br><br>
-      <em style="color:var(--gold-light)">Nocturna</em> descansa ahora bajo vidrio, sobre nogal americano, 
-      iluminada desde abajo — como si el instante exacto del despegue hubiera quedado 
-      suspendido para siempre en el tiempo.
-      <br><br>
-      Firmada. Numerada. Irrepetible.
-    </div>
-  </section>
-
-  <!-- GALLERY STRIP -->
-  <div class="gallery-strip">
-    <div class="gallery-cell">
-      <div class="gc-number">+4h</div>
-      <div class="gc-title">Tiempo de creación</div>
-      <div class="gc-desc">Cada pliegue, trazado a mano. Ningún proceso automatizado.</div>
-    </div>
-    <div class="gallery-cell">
-      <div class="gc-number">1</div>
-      <div class="gc-title">Hoja de papel</div>
-      <div class="gc-desc">Washi japonés. Sin cortes. Sin pegamento. Pureza absoluta.</div>
-    </div>
-    <div class="gallery-cell">
-      <div class="gc-number">V</div>
-      <div class="gc-title">Piezas en el mundo</div>
-      <div class="gc-desc">Edición numerada en romano. Cada pieza, única y certificada.</div>
-    </div>
-  </div>
-
-  <!-- SPECS -->
-  <section class="section" id="specs">
-    <p class="s-label">Especificaciones</p>
-    <table class="specs-table">
-      <tr><td>Técnica</td><td>Origami puro — un único pliegue continuo</td></tr>
-      <tr><td>Material</td><td>Papel Washi japonés, gramaje 40 g/m²</td></tr>
-      <tr><td>Vitrina</td><td>Vidrio templado + base de nogal americano macizo</td></tr>
-      <tr><td>Iluminación</td><td>LED cálido 2700K integrado en base, efecto halo</td></tr>
-      <tr><td>Dimensiones</td><td>17 × 17 × 16 cm — compacta, presentable</td></tr>
-      <tr><td>Edición</td><td>I / V · II / V · III / V · IV / V · V / V</td></tr>
-      <tr><td>Certificado</td><td>Documento firmado por el artista, número de serie único</td></tr>
-      <tr><td>Envío</td><td>Caja rígida con terciopelo negro · Seguro incluido</td></tr>
-    </table>
-  </section>
-
-  <!-- SEP -->
-  <div class="sep-diamond"><span class="diamond-ico">◆</span></div>
-
-  <!-- PRICE -->
-  <section class="price-hero" id="adquirir" style="max-width:100%; padding-left:0; padding-right:0;">
-    <p class="price-eyebrow">Precio de coleccionista</p>
-    <p class="price-giant"><sup>$</sup>650</p>
-    <p class="price-sub">USD · Certificado incluido · Envío internacional asegurado</p>
-
-    <div style="display:flex;justify-content:center;margin-top:2.5rem;">
-      <div class="avail-bar">
-        <div class="avail-dot"></div>
-        <span class="avail-txt">3 piezas disponibles de 5</span>
-      </div>
-    </div>
-
-    <button class="buy-btn" onclick="openModal()"><span>Adquirir esta pieza</span></button>
-  </section>
-
-  <!-- TRUST -->
-  <section class="section" style="padding-top:6rem;padding-bottom:6rem;max-width:100%;">
-    <div class="trust-grid" style="max-width:960px;margin:0 auto;">
-      <div class="trust-cell">
-        <span class="trust-ico">✦</span>
-        <p class="trust-title">Certificado de Autenticidad</p>
-        <p class="trust-desc">Documento físico firmado a mano por el artista. Número de serie grabado. Incluido en cada pieza.</p>
-      </div>
-      <div class="trust-cell">
-        <span class="trust-ico">◈</span>
-        <p class="trust-title">Embalaje de Lujo</p>
-        <p class="trust-desc">Caja rígida con interior de terciopelo negro. Diseñada para regalar sin envoltura adicional.</p>
-      </div>
-      <div class="trust-cell">
-        <span class="trust-ico">◇</span>
-        <p class="trust-title">Envío Asegurado</p>
-        <p class="trust-desc">Transporte con seguro completo. Si llega con cualquier daño, reposición o devolución inmediata.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- FINAL STRIP -->
-  <div class="final-strip">
-    <p>No es origami.<br>Es el tiempo detenido. Es <em>lo que no puede tener todo el mundo.</em></p>
-    <button class="buy-btn" onclick="openModal()"><span>Reservar ahora</span></button>
-  </div>
-
-  <!-- FOOTER -->
-  <footer>
-    <span class="ft-brand">NOCTURNA</span>
-    <span class="ft-copy">Arte Coleccionable · Hecho a mano en Perú · © 2025</span>
-  </footer>
-
-</div><!-- /page-wrap -->
-
-<!-- MODAL -->
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <button class="modal-x" onclick="closeModal()">✕</button>
-    <div id="form-wrap">
-      <p class="m-eye">Reservar pieza</p>
-      <p class="m-title">Nocturna — III / V</p>
-      <p class="m-price">$650 USD · Envío incluido</p>
-      <form name="reservas" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="handleSubmit(event)">
-        <input type="hidden" name="form-name" value="reservas">
-        <input type="hidden" name="bot-field" style="display:none">
-        <div class="m-field"><label>Nombre completo</label><input type="text" name="nombre" placeholder="Su nombre" required></div>
-        <div class="m-field"><label>Correo electrónico</label><input type="email" name="email" placeholder="correo@ejemplo.com" required></div>
-        <div class="m-field"><label>País de entrega</label><input type="text" name="pais" placeholder="País" required></div>
-        <button type="submit" class="m-submit">Confirmar Reserva</button>
-        <p class="m-note">Sin cargo ahora. Le contactaremos en menos de 24 horas para coordinar pago y envío.</p>
-      </form>
-    </div>
-    <div class="success" id="success">
-      <span class="s-ico">✦</span>
-      <p class="s-ttl">Reserva confirmada</p>
-      <p class="s-txt">Gracias por elegir <em>Nocturna</em>.<br>Nos pondremos en contacto en las próximas 24 horas para confirmar cada detalle de su adquisición.</p>
-    </div>
-  </div>
-</div>
-
-<script>
-/* ── CURSOR ── */
-const cur=document.getElementById('cur'), ring=document.getElementById('ring');
-let rx=0,ry=0,mx=window.innerWidth/2,my=window.innerHeight/2;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
-(function loop(){rx+=(mx-rx)*.1;ry+=(my-ry)*.1;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
-
-/* ── STARS ── */
-const canvas=document.getElementById('stars');
-const ctx=canvas.getContext('2d');
-let W,H,stars=[];
-function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
-function mkStars(){stars=[];for(let i=0;i<220;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*.9+.1,o:Math.random()*.5+.05,s:Math.random()*.003+.001,p:Math.random()*Math.PI*2});}
-function drawStars(){
-  ctx.clearRect(0,0,W,H);
-  stars.forEach(s=>{
-    s.p+=s.s; const o=s.o*(0.5+0.5*Math.sin(s.p));
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(201,169,110,${o})`;ctx.fill();
-  });
-  requestAnimationFrame(drawStars);
+    )
 }
-resize();mkStars();drawStars();
-window.addEventListener('resize',()=>{resize();mkStars();});
 
-/* ── MODAL ── */
-function openModal(){document.getElementById('overlay').classList.add('on');}
-function closeModal(){document.getElementById('overlay').classList.remove('on');}
-document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
+StarRating.displayName = "Star Rating"
 
-/* ── FORM con Netlify ── */
-function handleSubmit(e){
-  e.preventDefault();
-  const form=e.target;
-  const data=new FormData(form);
-  fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:new URLSearchParams(data).toString()})
-  .then(()=>{
-    document.getElementById('form-wrap').style.display='none';
-    document.getElementById('success').style.display='block';
-  })
-  .catch(()=>alert('Hubo un error. Por favor intente de nuevo.'));
-}
-</script>
-</body>
-</html>
+// Add property controls for customizing the component in Framer
+addPropertyControls(StarRating, {
+    rating: {
+        type: ControlType.Number,
+        defaultValue: 3,
+        min: 0,
+        max: 5,
+        step: 0.1,
+        displayStepper: true,
+        title: "Rating",
+    },
+    starColor: {
+        type: ControlType.Color,
+        defaultValue: "#d3d3d3",
+        title: "Star Color",
+    },
+    filledColor: {
+        type: ControlType.Color,
+        defaultValue: "#FFD700",
+        title: "Filled Color",
+    },
+    starSize: {
+        type: ControlType.Number,
+        defaultValue: 24,
+        min: 12,
+        max: 64,
+        step: 1,
+        unit: "px",
+        title: "Star Size",
+    },
+    textSize: {
+        type: ControlType.Number,
+        defaultValue: 16,
+        min: 10,
+        max: 64,
+        step: 1,
+        unit: "px",
+        title: "Text Size",
+    },
+    textWeight: {
+        type: ControlType.Number,
+        defaultValue: 400,
+        min: 100,
+        max: 900,
+        step: 100,
+        title: "Text Weight",
+    },
+    textColor: {
+        type: ControlType.Color,
+        defaultValue: "#000000",
+        title: "Text Color",
+    },
+})
